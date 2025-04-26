@@ -227,8 +227,7 @@
   )
 
 (defun progress-intro-start ()
-  (set! (-> *game-info* mode) 'play)
-  (initialize! *game-info* 'game (the-as game-save #f) "intro-start" (the-as resetter-spec #f))
+  (activate-run-menu!)
   (set-master-mode 'game)
   0
   )
@@ -241,6 +240,7 @@
   (set! (-> this scanlines-alpha) 0.0)
   (set-time! (-> this start-time))
   (set! (-> this which-slot) (-> *progress-work* last-slot-saved))
+  (set! global-save-slot (-> *progress-work* last-slot-saved))
   (set! (-> this yes-no-choice) #f)
   (set-time! (-> this time-out))
   (set-time! (-> this last-sound))
@@ -742,6 +742,7 @@
          (auto-save-command 'create-file 0 0 this #f)
          )
         (('loading)
+         (spawn-kraken-timer)
          (set! (-> v1-7 last-slot-saved) a2-1)
          (auto-save-command 'restore 0 a2-1 this #f)
          (set! (-> (the-as menu-missions-option (-> *missions-options* options 0)) current-index) 0.0)
@@ -2648,6 +2649,7 @@
 
 (defmethod respond-progress ((this menu-error-reading-option) (arg0 progress) (arg1 symbol))
   (when (cpad-pressed? 0 confirm)
+    (initialize! *game-info* 'game (the-as game-save #f) (the-as string #f) (the-as resetter-spec #f))
     (logclear! (-> *cpad-list* cpads 0 button0-abs 0) (pad-buttons confirm))
     (logclear! (-> *cpad-list* cpads 0 button0-rel 0) (pad-buttons confirm))
     (sound-play "generic-beep")

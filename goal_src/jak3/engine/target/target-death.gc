@@ -1336,6 +1336,18 @@
     )
   :code (behavior ((arg0 symbol) (arg1 attack-info))
     (local-vars (sv-32 attack-info) (sv-36 vector))
+    (when
+        (and
+          *target*
+          (not *scene-player*)
+          (= (paused?) #f)
+          (= real-run? #t)
+          (= run-type 0)
+        )
+        (set! real-run? #f)
+        (activate-progress *dproc* 'error-reading)
+      )
+    (+! (-> *game-info* total-deaths) 1)
     (logclear! (-> self water flags) (water-flag jump-out))
     (set-time! (-> self state-time))
     (set! (-> self neck flex-blend) 0.0)

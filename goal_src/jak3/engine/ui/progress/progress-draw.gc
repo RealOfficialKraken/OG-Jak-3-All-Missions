@@ -3457,22 +3457,38 @@
   (set! (-> arg1 origin y) 120.0)
   (set-width! arg1 330)
   (set-height! arg1 35)
-  (print-game-text
+  #|(print-game-text
     (lookup-text! *common-text* (text-id progress-disc-read-error) #f)
     arg1
     #f
     44
     (bucket-id hud-draw-hud-alpha)
+    )|#
+    (set! death-menu-mission "No Mission")
+    (set! death-menu-time "No Time")
+    (set! death-menu-hit-source "No hit source")
+    (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+    (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id hud-draw-hud-alpha))
+    (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+    (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 255 90 0.0 (font-color default) (font-flags middle shadow kerning large))))
+    (set! (-> font-ctx scale) 0.525)
+    (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+    (clear matt-str)
+    (clear *pc-encoded-matt-str*)
+    (format matt-str "<COLOR_RED>You Died!~%~%<COLOR_WHITE>On Mission:~% ~s~%~%~s~%~%Hit by:~%~s"
+    death-menu-mission
+    death-menu-time
+    death-menu-hit-source
     )
   (+! (-> arg1 origin y) 55.0)
   (set-height! arg1 85)
-  (print-game-text
+  #|(print-game-text
     (lookup-text! *common-text* (text-id progress-disc-read-error-prompt) #f)
     arg1
     #f
     44
     (bucket-id hud-draw-hud-alpha)
-    )
+    )|#
   (+! (-> arg1 origin y) 105.0)
   (set-height! arg1 50)
   (let ((a0-12 arg1))
@@ -3854,7 +3870,8 @@
     (sv-128 (function game-text-info text-id symbol string))
     (sv-144 game-text-info)
     )
-  (set! (-> *progress-list-level* mode) (-> arg0 current))
+  (when (= in-run-menu? #f)
+    (set! (-> *progress-list-level* mode) (-> arg0 current))
   (set! (-> *progress-list-level* act) (-> *progress-work* selected-num))
   (let ((f30-0 (fmax 0.0 (* 2.0 (- 0.5 (-> arg0 menu-transition))))))
     (let ((s3-0 (length *progress-list-level*)))
@@ -3973,6 +3990,7 @@
     (!= (-> this current-index) 0.0)
     (!= (-> this current-index) (the float (+ (-> arg0 total-num-tasks) -1)))
     )
+  )
   0
   (none)
   )

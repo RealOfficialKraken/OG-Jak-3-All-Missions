@@ -431,7 +431,7 @@
     )
   (case mode
     (('dead 'life)
-     (+! (-> this total-deaths) 1)
+     (+! (-> this total-deaths) 0)
      (+! (-> this continue-deaths) 1)
      (+! (-> this task-deaths) 1)
      (when *target*

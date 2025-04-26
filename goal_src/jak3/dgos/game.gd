@@ -482,4 +482,6 @@
   "debris.o"
   "shield-sphere.o"
   "entity-debug.o" ;; added
+  "runs-context.o" ;; added from kraken
+  "kraken-timer.o" ;; added from kraken
  ))

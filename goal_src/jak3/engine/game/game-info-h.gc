@@ -5,6 +5,29 @@
 ;; name in dgo: game-info-h
 ;; dgos: GAME
 
+  (declare-type kraken-timer process)
+  (define *kraken-timer* (the (pointer kraken-timer) #f))
+  (defun-extern spawn-kraken-timer (none))
+
+  (define matt-str (new 'global 'string 2048 (the-as string #f)))
+  (define *pc-encoded-matt-str* (new 'global 'string 2048 (the-as string #f)))
+  (define-extern reset-run! (function symbol (none)))
+  
+  (define-extern activate-run-menu! (function (none)))
+  (define in-run-menu? #f)
+  (define rm-option 0)
+  (define rm-sub-option 0)
+  (define rm-option-s "")
+  (define rm-option-s2 "")
+
+  (define global-save-slot 0)
+
+  (define death-menu-mission "")
+  (define death-menu-time "")
+  (define death-menu-hit-source "")
+
+  (define real-run? #f);; is this a real run or a practice run?
+  (define run-type 0) ;; set to 0 for "All Mission No Hit"
 
 ;; +++game-items
 (defenum game-items

@@ -1,0 +1,162 @@
+(in-package goal)
+;;*name: runs-context.gc
+
+;;*progress-process*
+
+(defun-extern spawn-kraken-timer (none))
+
+;;port this over to retail mode
+(defun dm-play-task-with-continue ((arg0 game-task) (arg1 string))
+  (let* ((t9-0 play-task)
+         (a1-1 'debug)
+         (a2-0 (cond
+                 ((cpad-hold? 0 l1)
+                  'pre-play
+                  )
+                 ((cpad-hold? 0 r1)
+                  'kiosk
+                  )
+                 )
+               )
+         (a1-2 (t9-0 arg0 a1-1 a2-0))
+         )
+    (if arg1
+        (set! a1-2 arg1)
+        )
+    (start 'play (get-continue-by-name *game-info* a1-2))
+    )
+  (set-master-mode 'game)
+  0
+  )
+
+  (defun reset-run! ((run-type symbol))
+    (case run-type
+      (('training)
+        (initialize! *game-info* 'play (the-as game-save #f) "wasstada-jump-training" (the-as resetter-spec #f))
+        (play-task (game-task arena-training-1) #f #f)
+        (spawn-kraken-timer)
+        (set! real-run? #f)
+      )
+      (('real-run)
+        (initialize! *game-info* 'play (the-as game-save #f) "wasstada-jump-training" (the-as resetter-spec #f))
+        (play-task (game-task arena-training-1) #f #f)
+        (spawn-kraken-timer)
+        (set! real-run? #t)
+      )
+    )
+    (none)
+  )
+
+  (defun activate-run-menu! ()
+    (set! in-run-menu? #t)
+    (set! rm-option 0)
+    (set! rm-sub-option 0)
+    (none)
+  )
+
+  (defun update-run-select-menu () ;;runs every frame to display a menu
+  (when (= in-run-menu? #t)
+  ;;header draw
+    (clear matt-str)
+    (clear *pc-encoded-matt-str*)
+    (format matt-str "<COLOR_ORANGE>Select Run Type"
+    rm-option-s
+    rm-option-s2
+    )
+    (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+    (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id hud-draw-hud-alpha))
+    (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+    (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 255 80 0.0 (font-color default) (font-flags middle shadow kerning large))))
+    (set! (-> font-ctx scale) 0.725)
+    (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  ;;selection draw
+    (clear matt-str)
+    (clear *pc-encoded-matt-str*)
+    (format matt-str "<COLOR_WHITE>~sActive Run~%~sPractice Run"
+    rm-option-s
+    rm-option-s2
+    )
+    (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+    (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id hud-draw-hud-alpha))
+    (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+    (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 255 110 0.0 (font-color default) (font-flags middle shadow kerning large))))
+    (set! (-> font-ctx scale) 0.525)
+    (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  ;;description draw
+    (clear matt-str)
+    (clear *pc-encoded-matt-str*)
+    (format matt-str "<COLOR_CYAN>An <COLOR_ORANGE>Active Run<COLOR_CYAN> sets you in a <COLOR_GREEN>valid run<COLOR_CYAN> and will track your time~%with a speedrunner timer. <COLOR_YELLOW>If you close the game, ~%get hit, or fail to complete all missions, your run will ~%become<COLOR_RED>invalid<COLOR_YELLOW>.~%~%<COLOR_CYAN>A <COLOR_ORANGE>Practice Run<COLOR_CYAN> will set a current run to <COLOR_RED>invalid<COLOR_CYAN>.~%The timer will still work, and ~%you'll get to see how many hits you've taken in the run."
+    rm-option-s
+    rm-option-s2
+    )
+    (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+    (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id hud-draw-hud-alpha))
+    (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+    (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 255 170 0.0 (font-color default) (font-flags middle shadow kerning large))))
+    (set! (-> font-ctx scale) 0.225)
+    (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  ;;sprite draw
+    (with-dma-buffer-add-bucket ((s2-0 (-> *display* frames (-> *display* on-screen) global-buf))
+                                (bucket-id particles)
+                                )
+        ;;box
+        (draw-sprite2d-xy s2-0 50 50 400 200 (new 'static 'rgba :a #x91) #x3fffff)
+        ;;top border
+        (draw-sprite2d-xy s2-0 50 50 400 1 (new 'static 'rgba :r 255 :g 255 :b 255 :a #x91) #x3fffff)
+        ;;bottom border
+        (draw-sprite2d-xy s2-0 50 250 400 1 (new 'static 'rgba :r 255 :g 255 :b 255 :a #x91) #x3fffff)
+        ;;left border
+        (draw-sprite2d-xy s2-0 50 50 1 200 (new 'static 'rgba :r 255 :g 255 :b 255 :a #x91) #x3fffff)
+        ;;right border
+        (draw-sprite2d-xy s2-0 450 50 1 200 (new 'static 'rgba :r 255 :g 255 :b 255 :a #x91) #x3fffff)
+    )
+    ;;color for current selection
+    (cond
+        ((= rm-option 0)
+            (set! rm-option-s "<COLOR_GREEN>")
+        )
+        (else
+            (set! rm-option-s "<COLOR_WHITE>")
+        )
+    )
+
+    (cond
+        ((= rm-option 1)
+            (set! rm-option-s2 "<COLOR_GREEN>")
+        )
+        (else
+            (set! rm-option-s2 "<COLOR_WHITE>")
+        )
+    )
+
+    ;;controls
+
+    (when (cpad-pressed? 0 down)
+        (+! rm-option 1)
+        (when (> rm-option 1)
+            (set! rm-option 0)
+        )
+    )
+
+    (when (cpad-pressed? 0 up)
+        (-! rm-option 1)
+        (when (< rm-option 0)
+            (set! rm-option 1)
+        )
+    )
+
+    (when (cpad-pressed? 0 confirm)
+        (cond
+            ((= rm-option 0)
+                (reset-run! 'real-run)
+            )
+            ((= rm-option 1)
+                (reset-run! 'training)
+            )
+        )
+        (set! in-run-menu? #f)
+        (set! rm-option 0)
+    )
+  )
+  (none)
+  )

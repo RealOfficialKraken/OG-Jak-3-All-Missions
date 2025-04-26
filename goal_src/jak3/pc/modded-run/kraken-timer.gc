@@ -1,0 +1,274 @@
+(in-package goal)
+;;name: kraken-timer.gc
+
+(define *speedrun-timer* (new 'global 'string 2048 (the-as string #f)))
+
+(define *speedrun-encode* (new 'global 'string 2048 (the-as string #f)))
+
+(define *speedrun-temp1* (new 'global 'string 2048 (the-as string #f)))
+(define *speedrun-temp2* (new 'global 'string 2048 (the-as string #f)))
+
+(deftype kraken-timer (process) ;;speedrun timer I use
+  ((tick                   int)
+   (tick2                  int)
+   (seconds                int)
+   (seconds2               int)
+   (minutes                int)
+   (minutes2               int)
+   (hours                  int)
+   (hours2                 int)
+   (return-str          string)
+   (return-tick         string)
+   (timer-on?           symbol)
+   (full-string         string)
+   (obj-completed?      symbol)
+  )
+  (:state-methods
+  idle
+  wait-for-blackout
+  stop
+  dead
+  )
+  (:methods
+  (draw-timer (_type_) none)
+  (kraken-event-handler (_type_ process int symbol event-message-block) none)
+  (check-for-completed-run (_type_) none)
+  (format-time (_type_) none)
+  )
+)
+
+(defmethod check-for-completed-run ((this kraken-timer))
+    (none)
+)
+
+(defbehavior kraken-timer-event-handler kraken-timer ((arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
+  (kraken-event-handler self arg0 arg1 arg2 arg3)
+  (none)
+  )
+
+(defmethod kraken-event-handler ((this kraken-timer) (arg0 process) (arg1 int) (arg2 symbol) (arg3 event-message-block))
+(case arg2
+    (('add-minute)
+      (+! (-> this minutes) 1)
+    )
+    (('add-hour)
+      (+! (-> this hours) 1)
+    )
+    (('stop-timer)
+      (set! (-> this timer-on?) #f)
+    )
+    (('resume-timer)
+      (set! (-> this timer-on?) #t)
+    )
+    (('current-time)
+        (format-time this)
+    )
+)
+(none)
+)
+
+(defbehavior kraken-timer-init-by-other kraken-timer ()
+  (set! (-> self tick) 0)
+  (set! (-> self tick2) 0)
+  (set! (-> self seconds) 0)
+  (set! (-> self seconds2) 0)
+  (set! (-> self minutes) 0)
+  (set! (-> self minutes2) 0)
+  (set! (-> self hours) 0)
+  (set! (-> self hours2) 0)
+  (set! (-> self obj-completed?) #f)
+  (set! (-> self return-str) "")
+  (set! (-> self timer-on?) #f)
+  (go (method-of-object self wait-for-blackout))
+  (none)
+)
+
+(defun spawn-kraken-timer ()
+  (set! *kraken-timer* 
+    (process-spawn 
+    kraken-timer 
+    :name "kraken-timer" 
+    :to *active-pool*)
+    )
+  (none)
+)
+
+(defstate wait-for-blackout (kraken-timer)
+    :virtual #t
+    :event kraken-timer-event-handler
+    :code
+    (behavior ()
+        (loop
+            (when 
+                (and
+                    *target*
+                    (= (pause-allowed?) #t)
+                )
+                (send-event self 'resume-timer #t)
+                (go-virtual idle)
+            )
+            (suspend)
+        )
+    )
+)
+
+(defstate idle (kraken-timer)
+  :virtual #t
+  :event kraken-timer-event-handler
+  :code
+  (behavior ()
+    (loop
+        (when (= (-> self obj-completed?) #f)
+            (check-for-completed-run self)
+        )
+        (when (= (-> self timer-on?) #f) ;stop timer after battle
+            (send-event (ppointer->process *kraken-timer*) 'stop-timer #t)
+            (go-virtual stop)
+        )
+        (when (-> self timer-on?) 
+            (+! (-> self tick) 1) ;raise ticks
+        )
+        (when (= (paused?) #f)
+            (draw-timer self) ;draw the timer onscreen
+        )
+      ;;;;;;;;;;;;;COUNT UP;;;;;;;;;;;;;
+      (when (>= (-> self tick) 10) ;00:00:0|0|
+        (set! (-> self tick) 0)
+        (+! (-> self tick2) 1)
+      )
+      (when (>= (-> self tick2) 6) ;00:00:|0|0
+        (set! (-> self tick2) 0)
+        (+! (-> self seconds) 1)
+      )
+      (when (>= (-> self seconds) 10) ;00:0|0|:00
+        (set! (-> self seconds) 0)
+        (+! (-> self seconds2) 1)
+      )
+      (when (>= (-> self seconds2) 6) ;00:|0|0:00
+        (set! (-> self seconds2) 0)
+        (+! (-> self minutes) 1)
+      )
+      (when (>= (-> self minutes) 10) ;00:|0|0:00
+        (set! (-> self minutes) 0)
+        (+! (-> self minutes2) 1)
+      )
+      (when (>= (-> self minutes2) 6) ;0|0|:00:00
+        (set! (-> self minutes2) 0)
+        (+! (-> self hours) 1)
+      )
+      (when (>= (-> self hours) 10) ;|0|0:00:00
+        (set! (-> self hours) 0)
+        (+! (-> self hours2) 1)
+      )
+      (when (>= (-> self hours2) 9) ;reset timer
+        (set! (-> self hours2) 0)
+        (set! (-> self hours) 0)
+      )
+      (when (= (-> (level-get-target-inside *level*) name) 'title) ;kill timer after leaving
+        (go-virtual dead)
+      )
+      (suspend)
+    )
+  )
+)
+
+(defstate stop (kraken-timer)
+  :virtual #t
+  :event kraken-timer-event-handler
+  :code
+  (behavior ()
+    (loop
+      (draw-timer self)
+      (when (= (-> self timer-on?) #t)
+        (go-virtual idle)
+      )
+      (when (= (-> (level-get-target-inside *level*) name) 'title) ;kill timer after leaving
+        (go-virtual dead)
+      )
+      (suspend)
+    )
+  )
+)
+
+(defstate dead (kraken-timer)
+  :virtual #t
+  :code
+  (behavior ()
+    (kill-by-name "kraken-timer" *active-pool*)
+    (set! *kraken-timer* #f)
+  )
+)
+
+(defmethod draw-timer ((this kraken-timer))
+  (clear *speedrun-timer*)
+  (clear *speedrun-encode*)
+  (clear matt-str)
+  (clear *pc-encoded-matt-str*)
+  (format matt-str "<COLOR_WHITE>~D~D:~D~D:~D~D"
+  (-> this hours2)
+  (-> this hours)
+  (-> this minutes2)
+  (-> this minutes)
+  (-> this seconds2)
+  (-> this seconds)
+  )
+  (format *speedrun-temp1* "<COLOR_WHITE>~D~D:~D~D:~D~D"
+  (-> this hours2)
+  (-> this hours)
+  (-> this minutes2)
+  (-> this minutes)
+  (-> this seconds2)
+  (-> this seconds)
+  )
+  (set! (-> this return-str) *speedrun-timer*)
+  (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+  (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf1))
+  (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+  (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 10 65 0.0 (font-color default) (font-flags shadow kerning large))))
+  (set! (-> font-ctx scale) 0.525)
+  (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  (clear matt-str)
+  (clear *pc-encoded-matt-str*)
+  (format matt-str "<COLOR_WHITE>~D~D"
+  (-> this tick2)
+  (-> this tick)
+  )
+  (format *speedrun-temp2* "<COLOR_WHITE>~D~D"
+  (-> this tick2)
+  (-> this tick)
+  )
+  (set! (-> this return-tick) *speedrun-encode*)
+  (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+  (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf1))
+  (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+  (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 40 82 0.0 (font-color default) (font-flags middle shadow kerning large))))
+  (set! (-> font-ctx scale) 0.325)
+  (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  
+  (when (= real-run? #f)
+    (clear matt-str)
+    (clear *pc-encoded-matt-str*)
+    (format matt-str "<COLOR_GREEN>Practice Mode~%<COLOR_WHITE>Hits Taken: ~d"
+    (-> *game-info* total-deaths)
+    )
+    (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+    (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id debug-no-zbuf1))
+    (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+    (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 20 100 0.0 (font-color default) (font-flags shadow kerning large))))
+    (set! (-> font-ctx scale) 0.275)
+    (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+  )
+  (none)
+)
+
+(defmethod format-time ((this kraken-timer))
+    (clear *speedrun-encode*)
+    (clear *speedrun-timer*)
+    (format *speedrun-encode* "~S:~S"
+    (-> this return-str)
+    (-> this return-tick)
+    )
+    (set! *speedrun-timer* *speedrun-encode*)
+    (format #t "~s" *speedrun-timer*)
+    (none)
+)
