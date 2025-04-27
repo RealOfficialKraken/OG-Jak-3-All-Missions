@@ -34,6 +34,8 @@
   (kraken-event-handler (_type_ process int symbol event-message-block) none)
   (check-for-completed-run (_type_) none)
   (format-time (_type_) none)
+  (match-timer-with-tick! (_type_) none)
+  (check-number-place (_type_) none)
   )
 )
 
@@ -50,9 +52,11 @@
 (case arg2
     (('add-minute)
       (+! (-> this minutes) 1)
+      (+! (-> *game-info* task-deaths) 3600)
     )
     (('add-hour)
       (+! (-> this hours) 1)
+      (+! (-> *game-info* task-deaths) 216000)
     )
     (('stop-timer)
       (set! (-> this timer-on?) #f)
@@ -62,6 +66,9 @@
     )
     (('current-time)
         (format-time this)
+    )
+    (('complete-run)
+      (set! (-> this obj-completed?) #t)
     )
 )
 (none)
@@ -79,6 +86,7 @@
   (set! (-> self obj-completed?) #f)
   (set! (-> self return-str) "")
   (set! (-> self timer-on?) #f)
+  (set! global-timer-tick 0)
   (go (method-of-object self wait-for-blackout))
   (none)
 )
@@ -107,6 +115,7 @@
                 (send-event self 'resume-timer #t)
                 (go-virtual idle)
             )
+            (+! add-extra-frame 1)
             (suspend)
         )
     )
@@ -115,6 +124,12 @@
 (defstate idle (kraken-timer)
   :virtual #t
   :event kraken-timer-event-handler
+  :enter
+  (behavior ()
+    (when (!= global-timer-tick (-> *game-info* task-deaths))
+      (match-timer-with-tick! self)
+    )
+  )
   :code
   (behavior ()
     (loop
@@ -125,45 +140,14 @@
             (send-event (ppointer->process *kraken-timer*) 'stop-timer #t)
             (go-virtual stop)
         )
-        (when (-> self timer-on?) 
-            (+! (-> self tick) 1) ;raise ticks
+        (when (-> self timer-on?) ;raise ticks
+            (+! (-> *game-info* task-deaths) 1)
+            (+! global-timer-tick 1)
+            (check-number-place self)
         )
         (when (= (paused?) #f)
             (draw-timer self) ;draw the timer onscreen
         )
-      ;;;;;;;;;;;;;COUNT UP;;;;;;;;;;;;;
-      (when (>= (-> self tick) 10) ;00:00:0|0|
-        (set! (-> self tick) 0)
-        (+! (-> self tick2) 1)
-      )
-      (when (>= (-> self tick2) 6) ;00:00:|0|0
-        (set! (-> self tick2) 0)
-        (+! (-> self seconds) 1)
-      )
-      (when (>= (-> self seconds) 10) ;00:0|0|:00
-        (set! (-> self seconds) 0)
-        (+! (-> self seconds2) 1)
-      )
-      (when (>= (-> self seconds2) 6) ;00:|0|0:00
-        (set! (-> self seconds2) 0)
-        (+! (-> self minutes) 1)
-      )
-      (when (>= (-> self minutes) 10) ;00:|0|0:00
-        (set! (-> self minutes) 0)
-        (+! (-> self minutes2) 1)
-      )
-      (when (>= (-> self minutes2) 6) ;0|0|:00:00
-        (set! (-> self minutes2) 0)
-        (+! (-> self hours) 1)
-      )
-      (when (>= (-> self hours) 10) ;|0|0:00:00
-        (set! (-> self hours) 0)
-        (+! (-> self hours2) 1)
-      )
-      (when (>= (-> self hours2) 9) ;reset timer
-        (set! (-> self hours2) 0)
-        (set! (-> self hours) 0)
-      )
       (when (= (-> (level-get-target-inside *level*) name) 'title) ;kill timer after leaving
         (go-virtual dead)
       )
@@ -271,4 +255,52 @@
     (set! *speedrun-timer* *speedrun-encode*)
     (format #t "~s" *speedrun-timer*)
     (none)
+)
+
+(defmethod match-timer-with-tick! ((this kraken-timer))
+  (when (!= (-> *game-info* task-deaths) 0)
+    (until (= global-timer-tick (+ (-> *game-info* task-deaths) add-extra-frame))
+      (+! global-timer-tick 1)
+      (check-number-place this)
+    )
+  )
+  (none)
+)
+
+(defmethod check-number-place ((this kraken-timer))
+  ;;;;;;;;;;;;;COUNT UP NUMBERS PLACE;;;;;;;;;;;;;
+    (+! (-> this tick) 1)
+    (when (>= (-> this tick) 10) ;00:00:0|0|
+      (set! (-> this tick) 0)
+      (+! (-> this tick2) 1)
+    )
+    (when (>= (-> this tick2) 6) ;00:00:|0|0
+      (set! (-> this tick2) 0)
+      (+! (-> this seconds) 1)
+    )
+    (when (>= (-> this seconds) 10) ;00:0|0|:00
+      (set! (-> this seconds) 0)
+      (+! (-> this seconds2) 1)
+    )
+    (when (>= (-> this seconds2) 6) ;00:|0|0:00
+      (set! (-> this seconds2) 0)
+      (+! (-> this minutes) 1)
+    )
+    (when (>= (-> this minutes) 10) ;00:|0|0:00
+      (set! (-> this minutes) 0)
+      (+! (-> this minutes2) 1)
+    )
+    (when (>= (-> this minutes2) 6) ;0|0|:00:00
+      (set! (-> this minutes2) 0)
+      (+! (-> this hours) 1)
+    )
+    (when (>= (-> this hours) 10) ;|0|0:00:00
+      (set! (-> this hours) 0)
+      (+! (-> this hours2) 1)
+    )
+    (when (>= (-> this hours2) 9) ;reset timer
+      (set! (-> this hours2) 0)
+      (set! (-> this hours) 0)
+    )
+  (none)
 )

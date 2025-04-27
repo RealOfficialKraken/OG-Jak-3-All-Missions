@@ -557,6 +557,7 @@
     (set! (-> *setting-control* user-default border-mode) #f)
     (apply-settings *setting-control*)
     (reset-target-state #t)
+    (runs-on-blackout)
     (target-exit)
     (logior! (-> self focus-status) (focus-status teleporting))
     (ja-channel-set! 0)

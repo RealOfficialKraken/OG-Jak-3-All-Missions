@@ -484,4 +484,5 @@
   "entity-debug.o" ;; added
   "runs-context.o" ;; added from kraken
   "kraken-timer.o" ;; added from kraken
+  "speedrunner-settings.o" ;;added from kraken
  ))

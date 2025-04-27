@@ -12,7 +12,8 @@
   (define matt-str (new 'global 'string 2048 (the-as string #f)))
   (define *pc-encoded-matt-str* (new 'global 'string 2048 (the-as string #f)))
   (define-extern reset-run! (function symbol (none)))
-  
+  (define-extern runs-on-blackout (function (none)))
+
   (define-extern activate-run-menu! (function (none)))
   (define in-run-menu? #f)
   (define rm-option 0)
@@ -28,6 +29,18 @@
 
   (define real-run? #f);; is this a real run or a practice run?
   (define run-type 0) ;; set to 0 for "All Mission No Hit"
+
+  (define in-debug? #t) ;;set to true to display mod-related debug stats
+  (define debug-str1 "")
+  (define debug-str2 "")
+  (define debug-str3 "")
+  (define debug-str4 "")
+  (define debug-str5 "")
+  (define debug-str6 "")
+  (define global-timer-tick 0)
+  (define add-extra-frame 0)
+
+  (define run-record 0)
 
 ;; +++game-items
 (defenum game-items

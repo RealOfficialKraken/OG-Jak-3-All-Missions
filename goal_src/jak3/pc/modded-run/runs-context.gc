@@ -29,6 +29,15 @@
   0
   )
 
+  (defun runs-on-blackout ()
+  (when (search-process-tree *active-pool* (lambda ((p process)) (type? p kraken-timer)))
+    (kill-by-name "kraken-timer" *active-pool*)
+    (set! add-extra-frame 1) ;;Sets an extra tick to kraken-timer since the process is dead for a frame
+    (spawn-kraken-timer)
+  )
+    (none)
+  )
+
   (defun reset-run! ((run-type symbol))
     (case run-type
       (('training)
@@ -158,5 +167,36 @@
         (set! rm-option 0)
     )
   )
+
+
+
+
+  ;;MODDED DEBUG DRAWS;;
+
+    (when
+      (and
+        *target*
+        (not *scene-player*)
+        (= (paused?) #f)
+        (= (pause-allowed?) #t)
+        (= in-debug? #t)
+      )
+      (clear matt-str)
+      (clear *pc-encoded-matt-str*)
+      (format matt-str 
+      "<COLOR_GREEN>(= in-debug? #t)~%
+      <COLOR_ORANGE>task-deaths (save): ~d~%
+      <COLOR_ORANGE>global-timer-tick: ~d
+      "
+      (-> *game-info* task-deaths)
+      global-timer-tick
+      )
+      (pc-encode-utf8-string matt-str *pc-encoded-matt-str*)
+      (with-dma-buffer-add-bucket ((buf (-> (current-frame) global-buf)) (bucket-id hud-draw-hud-alpha))
+      (dma-buffer-add-gs-set-flusha buf (alpha-1 (new 'static 'gs-alpha :b #x1 :d #x1)) (tex1-1 (new 'static 'gs-tex1 :mmag #x1 :mmin #x1)))
+      (let ((font-ctx (new 'stack 'font-context *font-default-matrix* 0 510 0.0 (font-color default) (font-flags right shadow kerning large))))
+      (set! (-> font-ctx scale) 0.325)
+      (draw-string-adv *pc-encoded-matt-str* buf font-ctx)))
+    )
   (none)
   )

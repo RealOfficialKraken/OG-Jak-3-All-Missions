@@ -58,7 +58,7 @@
 
   (total-deaths 400)
   (continue-deaths 401)
-  (task-deaths 402)
+  (task-deaths 402) ;;used by kraken-timer
   (game-start-time 403)
   (death-time 405)
   (hit-time 406)
