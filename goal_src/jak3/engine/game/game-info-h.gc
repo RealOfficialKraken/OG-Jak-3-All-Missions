@@ -40,6 +40,11 @@
   (define global-timer-tick 0)
   (define add-extra-frame 0)
 
+  (defun-extern print-debug-text string none)
+  (define debug-string "")
+  (define debug-text #f)
+  (define deb-i 0)
+
   (define run-record 0)
 
 ;; +++game-items

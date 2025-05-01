@@ -792,7 +792,17 @@
          (when (not (or (task-complete? this (the-as game-task s5-1)) (>= (the-as uint 1) (the-as uint s5-1))))
            (set! (-> this task-pickup-time) (-> *display* game-clock frame-counter))
            (set! (-> this task-complete-time s5-1) (-> *display* game-clock frame-counter))
-           (+! (-> this fuel) 1.0)
+           (when (and
+                    (or
+                      (logtest? (-> (the-as game-task s5-1) flags) (game-task-node-flag act1))
+                      (logtest? (the-as game-task s5-1) (game-task-node-flag act2))
+                      (logtest? (the-as game-task s5-1) (game-task-node-flag act3))
+                    )
+                    (not (logtest? (the-as game-task s5-1) (game-task-node-flag bbush)))
+                  )
+              (+! (-> this fuel) 1.0)
+              (print-debug-text "all mish check complete")
+           )
            (logior! (-> this task-perm-list data s5-1 status) (entity-perm-status complete))
            (task-resolution-close! (the-as game-task s5-1))
            )

@@ -1657,7 +1657,7 @@
                 :scene #f
                 )
               )
-            :flags (game-task-node-flag close-task no-percent act1)
+            :flags (game-task-node-flag close-task all-mish-flag no-percent act1)
             :parent-node (new 'static 'array game-task-node 4
               (game-task-node arena-training-1-collect)
               (game-task-node none)
@@ -1983,7 +1983,7 @@
                 :scene #f
                 )
               )
-            :flags (game-task-node-flag close-task act1)
+            :flags (game-task-node-flag close-task all-mish-flag act1)
             :parent-node (new 'static 'array game-task-node 4
               (game-task-node wascity-chase-introduction)
               (game-task-node none)
@@ -2161,7 +2161,7 @@
                 :scene #f
                 )
               )
-            :flags (game-task-node-flag close-task save-on-try exclusive act1)
+            :flags (game-task-node-flag close-task all-mish-flag save-on-try exclusive act1)
             :parent-node (new 'static 'array game-task-node 4
               (game-task-node wascity-pre-game-wait)
               (game-task-node none)
@@ -2501,7 +2501,7 @@
             :task (game-task desert-turtle-training)
             :name "desert-turtle-training-resolution"
             :when-open #f
-            :flags (game-task-node-flag close-task act1)
+            :flags (game-task-node-flag all-mish-flag close-task act1)
             :parent-node (new 'static 'array game-task-node 4
               (game-task-node desert-turtle-training-in-desert)
               (game-task-node none)
